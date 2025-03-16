@@ -1,0 +1,112 @@
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+};
+
+let multiplier = 1.00;
+let betAmount = 0;
+let gameStarted = false;
+let isCrashed = false;
+let cashOutPressed = false;
+let balance = 1000;
+let plane;
+let crashTime;
+let crashInterval;
+
+function preload() {
+    // Load the plane image
+    this.load.image('plane', 'https://upload.wikimedia.org/wikipedia/commons/0/09/Generic_airplane.png');
+}
+
+function create() {
+    // Setup game UI
+    this.add.text(20, 20, 'Aviator Casino Game', { font: '32px Arial', fill: '#fff' });
+
+    // Plane sprite (starting offscreen)
+    plane = this.add.image(100, 300, 'plane').setOrigin(0.5, 0.5);
+    plane.setAlpha(0); // Start with plane invisible
+
+    // Set up buttons
+    const betButton = document.getElementById('betButton');
+    const cashOutButton = document.getElementById('cashOutButton');
+    const betInput = document.getElementById('betAmount');
+    const multiplierText = document.getElementById('multiplier');
+    const balanceText = document.getElementById('balance');
+
+    betButton.addEventListener('click', () => {
+        betAmount = parseFloat(betInput.value);
+        if (betAmount > 0 && betAmount <= balance) {
+            balance -= betAmount;
+            balanceText.textContent = balance;
+            gameStarted = true;
+            multiplier = 1.00;
+            cashOutPressed = false;
+            isCrashed = false;
+            betButton.disabled = true;
+            cashOutButton.disabled = false;
+            startGame();
+        } else {
+            alert("Invalid bet amount or insufficient funds.");
+        }
+    });
+
+    cashOutButton.addEventListener('click', () => {
+        if (!cashOutPressed && gameStarted) {
+            cashOutPressed = true;
+            let earnings = betAmount * multiplier;
+            balance += earnings;
+            balanceText.textContent = balance;
+            cashOutButton.disabled = true;
+            betButton.disabled = false;
+            alert("You cashed out! You earned " + earnings.toFixed(2));
+            resetGame();
+        }
+    });
+}
+
+function update() {
+    if (gameStarted && !isCrashed) {
+        multiplier += 0.01; // Increase multiplier over time
+        document.getElementById('multiplier').textContent = multiplier.toFixed(2);
+        
+        // Move the plane (just to simulate it flying)
+        plane.x += 2;
+        plane.alpha = 1;
+
+        // Simulate crash (random time)
+        if (!crashInterval) {
+            crashTime = Math.random() * 10 + 5; // crash after 5-15 seconds
+            crashInterval = setTimeout(() => {
+                if (!cashOutPressed) {
+                    isCrashed = true;
+                    plane.setAlpha(0); // Hide the plane
+                    alert("The plane crashed! You lost your bet.");
+                    resetGame();
+                }
+            }, crashTime * 1000); // Convert to milliseconds
+        }
+    }
+}
+
+function startGame() {
+    plane.setAlpha(1);
+    gameStarted = true;
+}
+
+function resetGame() {
+    gameStarted = false;
+    multiplier = 1.00;
+    plane.x = 100; // Reset plane position
+    document.getElementById('multiplier').textContent = multiplier.toFixed(2);
+    betAmount = 0;
+    isCrashed = false;
+    clearTimeout(crashInterval);
+    crashInterval = null;
+}
+const game = new Phaser.Game(config);
